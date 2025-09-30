@@ -78,12 +78,12 @@ const finishTest = () => {
   const completedMultipleChoice = multipleChoiceAnswers.value.filter(a => a.selectedAnswer)
   const completedWritten = writtenAnswers.value.filter(a => a.answer.trim())
   
-  console.log('Test tugatildi:', {
+  console.log('Test completed:', {
     multipleChoice: completedMultipleChoice,
     written: completedWritten,
     total: completedCount.value
   })
-  // Bu yerda API ga yuborish mumkin
+  // API call can be made here
 }
 
 const goBack = () => {
@@ -102,7 +102,7 @@ const emit = defineEmits<{
       <!-- Header -->
       <div class="bg-gray-800 text-white p-6 rounded-t-2xl">
         <h1 class="text-xl sm:text-2xl font-bold text-center">
-          Javoblarni tekshirish
+          Check Answers
         </h1>
       </div>
 
@@ -111,7 +111,7 @@ const emit = defineEmits<{
         <!-- Progress indicator -->
         <div class="mb-8">
           <div class="flex items-center justify-between text-sm text-gray-600 mb-2">
-            <span>Javob berilgan savollar</span>
+            <span>Answered Questions</span>
             <span>{{ completedCount }} / {{ TOTAL_QUESTIONS }}</span>
           </div>
           <div class="w-full bg-gray-200 rounded-full h-2">
@@ -124,7 +124,7 @@ const emit = defineEmits<{
 
         <!-- Multiple Choice Questions (1-20) -->
         <div class="mb-12">
-          <h2 class="text-lg font-semibold text-gray-800 mb-6">Tanlovli savollar (1-20)</h2>
+          <h2 class="text-lg font-semibold text-gray-800 mb-6">Multiple Choice Questions (1-20)</h2>
           <div class="space-y-3 sm:space-y-4">
             <div 
               v-for="answer in multipleChoiceAnswers" 
@@ -158,7 +158,7 @@ const emit = defineEmits<{
 
         <!-- Written Questions (21-30) -->
         <div class="mb-8">
-          <h2 class="text-lg font-semibold text-gray-800 mb-6">Yozma savollar (21-30)</h2>
+          <h2 class="text-lg font-semibold text-gray-800 mb-6">Written Questions (21-30)</h2>
           <div class="space-y-3 sm:space-y-4">
             <div 
               v-for="answer in writtenAnswers" 
@@ -174,7 +174,7 @@ const emit = defineEmits<{
                   @input="updateWrittenAnswer(answer.id, ($event.target as HTMLInputElement).value)"
                   type="text"
                   class="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700 text-sm sm:text-base"
-                  :placeholder="`${answer.question} javobini kiriting`"
+                  :placeholder="`Enter answer for ${answer.question}`"
                 >
                 <div class="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 flex space-x-1 sm:space-x-2">
                   <button class="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-gray-400 hover:text-gray-600">
@@ -199,7 +199,7 @@ const emit = defineEmits<{
             @click="goBack"
             class="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-lg transition-colors duration-200"
           >
-            Orqaga
+            Back
           </button>
           <button 
             @click="finishTest"
@@ -211,7 +211,7 @@ const emit = defineEmits<{
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             ]"
           >
-            Tugatish
+            Finish
           </button>
         </div>
       </div>

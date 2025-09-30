@@ -6,12 +6,12 @@ const testCode = ref(275);
 const showAnswers = ref(false);
 
 const checkAnswers = () => {
-  console.log("Javoblarni tekshirish:", testCode.value);
+  console.log("Check answers:", testCode.value);
   showAnswers.value = true;
 };
 
 const openTelegram = () => {
-  console.log("Telegram ochish");
+  console.log("Open Telegram");
 };
 
 const goBackToTest = () => {
@@ -60,7 +60,7 @@ const goBackToTest = () => {
       <h1
         class="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-800 text-center mb-6 sm:mb-8 lg:mb-10 leading-tight"
       >
-        Javoblarni tekshirish
+        Check Answers
       </h1>
 
       <!-- Test Code Input -->
@@ -68,7 +68,7 @@ const goBackToTest = () => {
         <label
           class="block text-sm sm:text-base lg:text-lg font-semibold text-gray-700 mb-3 sm:mb-4"
         >
-          Test kodi
+          Test Code
         </label>
         <div class="relative">
           <input
@@ -86,7 +86,7 @@ const goBackToTest = () => {
           @click="checkAnswers"
           class="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold py-3 sm:py-4 lg:py-5 px-6 sm:px-8 lg:px-10 rounded-xl sm:rounded-2xl transition-all duration-200 text-sm sm:text-base lg:text-lg xl:text-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0"
         >
-          Javoblarni tekshirish
+          Check Answers
         </button>
 
         <button
