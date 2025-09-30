@@ -9,9 +9,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@gotitinc/mathlive": "^0.98.6-hf3",
     "@tailwindcss/vite": "^4.1.13",
+    "axios": "^1.12.2",
+    "mathlive": "^0.107.1",
+    "pinia": "^3.0.3",
     "tailwindcss": "^4.1.13",
-    "vue": "^3.5.21"
+    "vue": "^3.5.21",
+    "vue-router": "4"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.1",

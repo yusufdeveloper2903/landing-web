@@ -1,102 +1,115 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import axios from "axios";
+import "mathlive";
 
-// Types
-interface MultipleChoiceAnswer {
+interface Question {
   id: number;
-  question: string;
-  selectedAnswer: string;
-  type: "multiple";
+  option: string[];
+  type: string;
+  index: number;
 }
 
-interface WrittenAnswer {
-  id: number;
-  question: string;
-  answer: string;
-  type: "written";
-}
+// STATE SETUP
+const route = useRoute();
+const router = useRouter();
 
-// Constants
-const ANSWER_CHOICES = ["A", "B", "C", "D"] as const;
-const MULTIPLE_CHOICE_COUNT = 20;
-const WRITTEN_QUESTIONS_COUNT = 10;
-const TOTAL_QUESTIONS = MULTIPLE_CHOICE_COUNT + WRITTEN_QUESTIONS_COUNT;
+// REACTIVE DATA
+const questions = ref<Question[]>([]);
+const selectedChoiceAnswers = ref<Record<number, string>>({});
+const writtenAnswers = ref<Record<number, string>>({});
+const isSubmitting = ref(false);
+const tgId = ref<string | null>(null);
 
-// Reactive data
-const multipleChoiceAnswers = ref<MultipleChoiceAnswer[]>(
-  Array.from({ length: MULTIPLE_CHOICE_COUNT }, (_, index) => ({
-    id: index + 1,
-    question: `${index + 1}.`,
-    selectedAnswer: "",
-    type: "multiple" as const,
-  }))
+// COMPUTED
+const choiceQuestions = computed(() =>
+  questions.value.filter((q) => q.type === "CHOICE")
 );
-
-const writtenAnswers = ref<WrittenAnswer[]>(
-  Array.from({ length: WRITTEN_QUESTIONS_COUNT }, (_, index) => ({
-    id: MULTIPLE_CHOICE_COUNT + index + 1,
-    question: `${MULTIPLE_CHOICE_COUNT + index + 1}.`,
-    answer: "",
-    type: "written" as const,
-  }))
+const writtenQuestions = computed(() =>
+  questions.value.filter((q) => q.type !== "CHOICE")
 );
+const TOTAL_QUESTIONS = computed(() => questions.value.length);
+const completedCount = computed(() => {
+  const choiceCount = Object.values(selectedChoiceAnswers.value).filter(
+    Boolean
+  ).length;
+  const writtenCount = Object.values(writtenAnswers.value).filter(
+    Boolean
+  ).length;
+  return choiceCount + writtenCount;
+});
 
-// Computed properties
-const allAnswers = computed(() => [
-  ...multipleChoiceAnswers.value,
-  ...writtenAnswers.value,
-]);
-
-const isTestComplete = computed(
-  () =>
-    multipleChoiceAnswers.value.every(
-      (answer) => answer.selectedAnswer !== ""
-    ) && writtenAnswers.value.every((answer) => answer.answer.trim() !== "")
-);
-
-const completedCount = computed(
-  () =>
-    multipleChoiceAnswers.value.filter((a) => a.selectedAnswer).length +
-    writtenAnswers.value.filter((a) => a.answer.trim()).length
-);
-
-// Methods
-const selectAnswer = (questionId: number, choice: string) => {
-  const answer = multipleChoiceAnswers.value.find((a) => a.id === questionId);
-  if (answer) {
-    answer.selectedAnswer = answer.selectedAnswer === choice ? "" : choice;
-  }
+// METHODS
+const selectChoiceAnswer = (questionId: number, choice: string) => {
+  selectedChoiceAnswers.value = {
+    ...selectedChoiceAnswers.value,
+    [questionId]:
+      selectedChoiceAnswers.value[questionId] === choice ? "" : choice,
+  };
 };
 
-const updateWrittenAnswer = (questionId: number, value: string) => {
-  const answer = writtenAnswers.value.find((a) => a.id === questionId);
-  if (answer) {
-    answer.answer = value;
-  }
+const onMathInput = (questionId: number, event: Event) => {
+  const target = event.target as HTMLInputElement & { value: string };
+  writtenAnswers.value = {
+    ...writtenAnswers.value,
+    [questionId]: target.value,
+  };
 };
 
-const finishTest = () => {
-  const completedMultipleChoice = multipleChoiceAnswers.value.filter(
-    (a) => a.selectedAnswer
-  );
-  const completedWritten = writtenAnswers.value.filter((a) => a.answer.trim());
+const finishTest = async () => {
+  if (isSubmitting.value) return;
+  const taskNumber = route.params.task_number as string | undefined;
+  if (!taskNumber) return;
 
-  console.log("Test completed:", {
-    multipleChoice: completedMultipleChoice,
-    written: completedWritten,
-    total: completedCount.value,
-  });
-  // API call can be made here
+  const choicePayload = Object.entries(selectedChoiceAnswers.value)
+    .map(([question, answer]) => ({ question: Number(question), answer }))
+    .filter((item) => item.answer && String(item.answer).trim() !== "");
+
+  const writtenPayload = Object.entries(writtenAnswers.value)
+    .map(([question, answer]) => ({ question: Number(question), answer }))
+    .filter((item) => item.answer && String(item.answer).trim() !== "");
+
+  const payload = {
+    answers: [...choicePayload, ...writtenPayload],
+    task_number: Number(taskNumber),
+  };
+
+  if (!payload.answers.length) return;
+
+  try {
+    isSubmitting.value = true;
+    await axios.post(
+      `http://dicore.uz:8796/api/v1/client/client_solving_test/?tg_id=${tgId.value}`,
+      payload
+    );
+    router.push({ name: "home", query: { user_id: tgId.value } });
+  } catch (error) {
+    console.error("Failed to submit answers", error);
+  } finally {
+    isSubmitting.value = false;
+  }
 };
 
 const goBack = () => {
-  emit("goBack");
+  router.back();
 };
 
-// Emits
-const emit = defineEmits<{
-  goBack: [];
-}>();
+// LIFECYCLE
+onMounted(async () => {
+  tgId.value = (route.query.user_id as string) || null;
+  const taskNumber = route.params.task_number as string | undefined;
+  if (!tgId.value || !taskNumber) return;
+  try {
+    const { data } = await axios.get(
+      `http://dicore.uz:8796/api/v1/client/check_task/`,
+      { params: { tg_id: tgId.value, task_number: taskNumber } }
+    );
+    questions.value = Array.isArray(data?.questions) ? data.questions : [];
+  } catch (error) {
+    console.error("Failed to fetch questions", error);
+  }
+});
 </script>
 
 <template>
@@ -125,33 +138,30 @@ const emit = defineEmits<{
           </div>
         </div>
 
-        <!-- Multiple Choice Questions (1-20) -->
-        <div class="mb-12">
+        <!-- Multiple Choice -->
+        <div class="mb-12" v-if="choiceQuestions.length">
           <h2 class="text-lg font-semibold text-gray-800 mb-6">
-            Multiple Choice Questions (1-20)
+            Multiple Choice
           </h2>
           <div class="space-y-3 sm:space-y-4">
             <div
-              v-for="answer in multipleChoiceAnswers"
-              :key="answer.id"
+              v-for="(q, idx) in choiceQuestions"
+              :key="q.id"
               class="flex items-center space-x-3 sm:space-x-4"
             >
-              <!-- Question number -->
               <div
                 class="text-gray-700 font-medium text-sm sm:text-base min-w-0 flex-shrink-0 w-8 sm:w-12"
               >
-                {{ answer.question }}
+                {{ idx + 1 }}.
               </div>
-
-              <!-- Answer choices -->
               <div class="flex space-x-1 sm:space-x-2">
                 <button
-                  v-for="choice in ANSWER_CHOICES"
-                  :key="choice"
-                  @click="selectAnswer(answer.id, choice)"
+                  v-for="choice in q.option"
+                  :key="choice + q.id"
+                  @click="selectChoiceAnswer(q.id, choice)"
                   :class="[
                     'w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-lg border-2 font-bold text-xs sm:text-sm transition-all duration-200 flex items-center justify-center',
-                    answer.selectedAnswer === choice
+                    selectedChoiceAnswers[q.id] === choice
                       ? 'bg-blue-600 border-blue-600 text-white shadow-lg'
                       : 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200 hover:border-gray-400',
                   ]"
@@ -163,75 +173,33 @@ const emit = defineEmits<{
           </div>
         </div>
 
-        <!-- Written Questions (21-30) -->
-        <div class="mb-8">
+        <!-- Written (Math) -->
+        <div class="mb-8" v-if="writtenQuestions.length">
           <h2 class="text-lg font-semibold text-gray-800 mb-6">
-            Written Questions (21-30)
+            Written Questions
           </h2>
           <div class="space-y-3 sm:space-y-4">
             <div
-              v-for="answer in writtenAnswers"
-              :key="answer.id"
+              v-for="(q, idx) in writtenQuestions"
+              :key="q.id"
               class="flex items-center space-x-3 sm:space-x-4"
             >
               <label
                 class="text-sm sm:text-base font-medium text-gray-700 min-w-0 flex-shrink-0 w-12 sm:w-16"
               >
-                {{ answer.question }}
+                {{ idx + choiceQuestions.length + 1 }}.
               </label>
-              <div class="flex-1 relative">
-                <input
-                  :value="answer.answer"
-                  @input="
-                    updateWrittenAnswer(
-                      answer.id,
-                      ($event.target as HTMLInputElement).value
-                    )
-                  "
-                  type="text"
-                  class="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700 text-sm sm:text-base"
-                  :placeholder="`Enter answer for ${answer.question}`"
-                />
-                <div
-                  class="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 flex space-x-1 sm:space-x-2"
-                >
-                  <button
-                    class="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-gray-400 hover:text-gray-600"
-                  >
-                    <svg
-                      class="w-3 h-3 sm:w-4 sm:h-4"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fill-rule="evenodd"
-                        d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
-                        clip-rule="evenodd"
-                      ></path>
-                    </svg>
-                  </button>
-                  <button
-                    class="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-gray-400 hover:text-gray-600"
-                  >
-                    <svg
-                      class="w-3 h-3 sm:w-4 sm:h-4"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fill-rule="evenodd"
-                        d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
-                        clip-rule="evenodd"
-                      ></path>
-                    </svg>
-                  </button>
-                </div>
+              <div class="flex-1">
+                <math-field
+                  :value="writtenAnswers[q.id] ?? ''"
+                  @input="onMathInput(q.id, $event)"
+                  class="w-full lg:w-1/3 border border-gray-300 rounded-lg"
+                ></math-field>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Action Buttons -->
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <button
             @click="goBack"
@@ -241,13 +209,7 @@ const emit = defineEmits<{
           </button>
           <button
             @click="finishTest"
-            :disabled="!isTestComplete"
-            :class="[
-              'px-8 py-3 font-semibold rounded-lg transition-all duration-200 shadow-lg',
-              isTestComplete
-                ? 'bg-blue-600 hover:bg-blue-700 text-white hover:shadow-xl'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed',
-            ]"
+            class="px-8 py-3 font-semibold rounded-lg transition-all duration-200 shadow-lg bg-blue-600 hover:bg-blue-700 text-white hover:shadow-xl"
           >
             Finish
           </button>
