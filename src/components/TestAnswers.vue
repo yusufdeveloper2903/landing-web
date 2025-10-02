@@ -138,7 +138,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center p-4">
+  <div class="min-h-screen flex items-start justify-center p-4 pt-16 sm:pt-20">
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full">
       <!-- Header -->
       <div
@@ -241,7 +241,7 @@ onMounted(async () => {
                   :key="choice + q.id"
                   @click="selectChoiceAnswer(q.id, choice)"
                   :class="[
-                    'flex-1 h-12 sm:h-14 md:h-16 rounded-xl border-2 font-semibold text-base sm:text-lg md:text-xl uppercase tracking-wide transition-all duration-200 flex items-center justify-center min-w-0',
+                    'flex-1 h-8 sm:h-10 md:h-12 rounded-xl border-2 font-semibold text-base sm:text-lg md:text-xl uppercase tracking-wide transition-all duration-200 flex items-center justify-center min-w-0',
                     selectedChoiceAnswers[q.id] === choice
                       ? 'bg-blue-600 border-blue-600 text-white shadow-lg'
                       : 'bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 hover:border-gray-400',
