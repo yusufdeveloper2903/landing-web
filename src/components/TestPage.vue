@@ -12,7 +12,7 @@ const errorMessage = ref<string>("");
 const checkAnswers = async () => {
   if (!tgId.value || !testCode.value) return;
   try {
-    const { data } = await axios.get(
+     await axios.get(
       `http://dicore.uz:8796/api/v1/client/check_task/`,
       { params: { tg_id: tgId.value, task_number: String(testCode.value) } }
     );
@@ -22,8 +22,13 @@ const checkAnswers = async () => {
       params: { task_number: String(testCode.value) },
       query: { user_id: tgId.value },
     });
-  } catch (error) {
-    errorMessage.value = error?.response?.data?.msg || "Error";
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error)) {
+      const msg = (error.response?.data as any)?.msg;
+      errorMessage.value = typeof msg === "string" ? msg : "Error";
+    } else {
+      errorMessage.value = "Error";
+    }
   }
 };
 
@@ -53,28 +58,60 @@ onMounted(() => {
 
 <template>
   <div
-    class="min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-indigo-200 flex items-center justify-center p-4 sm:p-6 lg:p-8 "
+    class="min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8"
   >
     <div
-      class="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 lg:p-12 w-full max-w-sm sm:max-w-md lg:max-w-lg xl:max-w-xl"
+      class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-6 sm:p-8 lg:p-12 w-full"
     >
       <!-- Icon -->
       <div class="flex justify-center mb-6 sm:mb-8 lg:mb-10">
         <div class="relative">
-          <div class="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 border-2 border-gray-800 rounded-xl flex items-center justify-center shadow-lg relative bg-white">
+          <div
+            class="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 border-2 border-gray-800 dark:border-gray-200 rounded-xl flex items-center justify-center shadow-lg relative bg-white dark:bg-gray-900"
+          >
             <svg
-              class="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 text-gray-800"
+              class="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 text-gray-800 dark:text-gray-100"
               viewBox="0 0 24 24"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
             >
-              <rect x="4" y="3" width="16" height="18" rx="3" ry="3" stroke="currentColor" stroke-width="2" />
-              <path d="M9 7h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-              <path d="M7 12l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <rect
+                x="4"
+                y="3"
+                width="16"
+                height="18"
+                rx="3"
+                ry="3"
+                stroke="currentColor"
+                stroke-width="2"
+              />
+              <path
+                d="M9 7h6"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+              <path
+                d="M7 12l3 3 7-7"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
             </svg>
-            <div class="absolute -bottom-1 -right-1 w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
-              <svg class="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+            <div
+              class="absolute -bottom-1 -right-1 w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 bg-green-500 rounded-full flex items-center justify-center shadow-lg"
+            >
+              <svg
+                class="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-white"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                  clip-rule="evenodd"
+                />
               </svg>
             </div>
           </div>
@@ -83,14 +120,14 @@ onMounted(() => {
 
       <!-- Title -->
       <h1
-        class="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-800 text-center mb-6 sm:mb-8 lg:mb-10 leading-tight"
+        class="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-800 dark:text-gray-100 text-center mb-6 sm:mb-8 lg:mb-10 leading-tight"
       >
         Check Answers
       </h1>
       <!-- Test Code Input -->
       <div class="mb-6 sm:mb-8 lg:mb-10">
         <label
-          class="block text-sm sm:text-base lg:text-lg font-semibold text-gray-700 mb-3 sm:mb-4"
+          class="block text-sm sm:text-base lg:text-lg font-semibold text-gray-700 dark:text-gray-200 mb-3 sm:mb-4"
         >
           Test Code
         </label>
@@ -98,10 +135,10 @@ onMounted(() => {
           <input
             v-model.number="testCode"
             type="number"
-            class="w-full px-4 py-3 sm:px-6 sm:py-4 lg:px-8 lg:py-5 border-2 border-gray-300 rounded-xl sm:rounded-2xl focus:ring-4 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-600 text-lg sm:text-xl lg:text-2xl font-medium transition-all duration-200 hover:border-gray-400"
+            class="w-full px-4 py-3 sm:px-6 sm:py-4 lg:px-8 lg:py-5 border-2 border-gray-300 dark:border-gray-600 rounded-xl sm:rounded-2xl focus:ring-4 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-600 dark:text-gray-100 bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-300 text-lg sm:text-xl lg:text-2xl font-medium transition-all duration-200 hover:border-gray-400"
             placeholder="275"
           />
-          <p v-if="errorMessage" class="mt-2 text-sm text-red-600">
+          <p v-if="errorMessage" class="mt-2 text-sm text-red-600 dark:text-red-400">
             {{ errorMessage }}
           </p>
         </div>

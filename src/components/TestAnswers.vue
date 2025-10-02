@@ -21,6 +21,9 @@ const selectedChoiceAnswers = ref<Record<number, string>>({});
 const writtenAnswers = ref<Record<number, string>>({});
 const isSubmitting = ref(false);
 const tgId = ref<string | null>(null);
+const isSuccessOpen = ref(false);
+const isErrorToastOpen = ref(false);
+const errorToastMessage = ref<string>("");
 
 // COMPUTED
 const choiceQuestions = computed(() =>
@@ -83,9 +86,24 @@ const finishTest = async () => {
       `http://dicore.uz:8796/api/v1/client/client_solving_test/?tg_id=${tgId.value}`,
       payload
     );
-    router.push({ name: "home", query: { user_id: tgId.value } });
+    isSuccessOpen.value = true;
+
+    setTimeout(() => {
+      goHome();
+    }, 1500);
   } catch (error) {
-    console.error("Failed to submit answers", error);
+    let message = "Error";
+    if (axios.isAxiosError(error)) {
+      const msg = (error.response?.data as any)?.msg;
+      message = typeof msg === "string" ? msg : (error.message || "Error");
+    } else if (error instanceof Error) {
+      message = error.message || "Error";
+    }
+    errorToastMessage.value = message;
+    isErrorToastOpen.value = true;
+    setTimeout(() => {
+      isErrorToastOpen.value = false;
+    }, 3000);
   } finally {
     isSubmitting.value = false;
   }
@@ -95,8 +113,13 @@ const goBack = () => {
   router.back();
 };
 
+const goHome = () => {
+  router.push({ name: "home", query: { user_id: tgId.value } });
+};
+
 // LIFECYCLE
 onMounted(async () => {
+  // Theme DOM boshqaruvi endi App.vue da
   tgId.value = (route.query.user_id as string) || null;
   const taskNumber = route.params.task_number as string | undefined;
   if (!tgId.value || !taskNumber) return;
@@ -110,14 +133,58 @@ onMounted(async () => {
     console.error("Failed to fetch questions", error);
   }
 });
+
+// WATCH (global theme App.vue ga ko'chirilgan)
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-6xl">
+  <div class="min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full">
       <!-- Header -->
-      <div class="bg-gray-800 text-white p-6 rounded-t-2xl">
+      <div
+        class="bg-white text-gray-900 dark:bg-gradient-to-r dark:from-gray-900 dark:to-slate-800 dark:text-white p-6 rounded-t-2xl flex items-center justify-center border-b border-gray-200 dark:border-slate-700"
+      >
         <h1 class="text-xl sm:text-2xl font-bold text-center">Check Answers</h1>
+      </div>
+
+      <!-- Success dialog -->
+      <div
+        v-if="isSuccessOpen"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4"
+      >
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+        <div
+          class="relative bg-white dark:bg-gray-800 text-gray-800 dark:text-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center"
+        >
+          <div
+            class="mx-auto mb-4 w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center"
+          >
+            <svg
+              class="w-7 h-7 text-green-600"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </div>
+          <h3 class="text-lg font-semibold mb-1">Successfully saved</h3>
+          <p class="text-sm opacity-80">Test answers successfully saved.</p>
+          <p v-if="route.params.task_number" class="mt-1 text-xs opacity-70">
+            Test Code: {{ route.params.task_number }}
+          </p>
+          <div class="mt-6 flex justify-center gap-3">
+            <button
+              @click="goHome"
+              class="px-5 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+            >
+              OK
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Content -->
@@ -125,12 +192,12 @@ onMounted(async () => {
         <!-- Progress indicator -->
         <div class="mb-8">
           <div
-            class="flex items-center justify-between text-sm text-gray-600 mb-2"
+            class="flex items-center justify-between text-sm text-gray-600 dark:text-gray-300 mb-2"
           >
             <span>Answered Questions</span>
             <span>{{ completedCount }} / {{ TOTAL_QUESTIONS }}</span>
           </div>
-          <div class="w-full bg-gray-200 rounded-full h-2">
+          <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
             <div
               class="bg-blue-600 h-2 rounded-full transition-all duration-300"
               :style="{ width: `${(completedCount / TOTAL_QUESTIONS) * 100}%` }"
@@ -138,9 +205,23 @@ onMounted(async () => {
           </div>
         </div>
 
+  <div
+    v-if="isErrorToastOpen"
+    class="fixed top-4 right-4 z-50 max-w-sm w-[90vw] sm:w-auto"
+  >
+    <div class="bg-red-600 text-white rounded-lg shadow-lg px-4 py-3 flex items-start gap-3">
+      <svg class="w-5 h-5 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-.75-5.25a.75.75 0 011.5 0 .75.75 0 01-1.5 0zM10 6a.75.75 0 01.75.75v5a.75.75 0 01-1.5 0v-5A.75.75 0 0110 6z" clip-rule="evenodd" />
+      </svg>
+      <div class="text-sm font-medium">{{ errorToastMessage }}</div>
+    </div>
+  </div>
+
         <!-- Multiple Choice -->
         <div class="mb-12" v-if="choiceQuestions.length">
-          <h2 class="text-lg font-semibold text-gray-800 mb-6">
+          <h2
+            class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-6"
+          >
             Multiple Choice
           </h2>
           <div class="space-y-3 sm:space-y-4">
@@ -150,20 +231,20 @@ onMounted(async () => {
               class="flex items-center space-x-3 sm:space-x-4"
             >
               <div
-                class="text-gray-700 font-medium text-sm sm:text-base min-w-0 flex-shrink-0 w-8 sm:w-12"
+                class="text-gray-700 dark:text-gray-200 font-medium text-sm sm:text-base min-w-0 flex-shrink-0 w-8 sm:w-12"
               >
                 {{ idx + 1 }}.
               </div>
-              <div class="flex space-x-1 sm:space-x-2">
+              <div class="flex flex-nowrap gap-2 sm:gap-3 w-full">
                 <button
                   v-for="choice in q.option"
                   :key="choice + q.id"
                   @click="selectChoiceAnswer(q.id, choice)"
                   :class="[
-                    'w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-lg border-2 font-bold text-xs sm:text-sm transition-all duration-200 flex items-center justify-center',
+                    'flex-1 h-12 sm:h-14 md:h-16 rounded-xl border-2 font-semibold text-base sm:text-lg md:text-xl uppercase tracking-wide transition-all duration-200 flex items-center justify-center min-w-0',
                     selectedChoiceAnswers[q.id] === choice
                       ? 'bg-blue-600 border-blue-600 text-white shadow-lg'
-                      : 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200 hover:border-gray-400',
+                      : 'bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 hover:border-gray-400',
                   ]"
                 >
                   {{ choice }}
@@ -175,7 +256,9 @@ onMounted(async () => {
 
         <!-- Written (Math) -->
         <div class="mb-8" v-if="writtenQuestions.length">
-          <h2 class="text-lg font-semibold text-gray-800 mb-6">
+          <h2
+            class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-6"
+          >
             Written Questions
           </h2>
           <div class="space-y-3 sm:space-y-4">
@@ -185,7 +268,7 @@ onMounted(async () => {
               class="flex items-center space-x-3 sm:space-x-4"
             >
               <label
-                class="text-sm sm:text-base font-medium text-gray-700 min-w-0 flex-shrink-0 w-12 sm:w-16"
+                class="text-sm sm:text-base font-medium text-gray-700 dark:text-gray-200 min-w-0 flex-shrink-0 w-12 sm:w-16"
               >
                 {{ idx + choiceQuestions.length + 1 }}.
               </label>
@@ -193,7 +276,7 @@ onMounted(async () => {
                 <math-field
                   :value="writtenAnswers[q.id] ?? ''"
                   @input="onMathInput(q.id, $event)"
-                  class="w-full lg:w-1/3 border border-gray-300 rounded-lg"
+                  class="w-full lg:w-1/3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 ></math-field>
               </div>
             </div>

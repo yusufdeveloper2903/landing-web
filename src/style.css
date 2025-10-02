@@ -32,7 +32,12 @@ body {
   min-width: 320px;
   width: 100%;
   overflow-x: hidden;
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #ddd6fe 100%);
+  background-color: #ffffff;
+}
+
+.dark body {
+  background: linear-gradient(135deg, #0f172a 0%, #111827 50%, #0b1220 100%);
+  color: #e5e7eb;
 }
 
 #app {
